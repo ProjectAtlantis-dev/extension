@@ -129,7 +129,7 @@ window.addEventListener("load", async function(event) {
 
 
         if (window.location.href !== currentUrl) {
-            console.log("LLM service scanning " + window.location.href + " " + currentUrl)
+            //console.log("LLM service scanning " + window.location.href + " " + currentUrl)
 
             currentUrl = window.location.href;
             //console.log('URL has been changed!');
