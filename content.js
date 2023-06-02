@@ -19,9 +19,14 @@ function getId() {
     return clientId;
 }
 
-function getHostId() {
+async function getHostId() {
 
-    return navigator.userAgent;
+    let braveTag = "";
+    if ((navigator.brave && await navigator.brave.isBrave() || false)) {
+        braveTag = " Brave";
+    }
+
+    return navigator.userAgent + braveTag;
     /*
     let hostId = localStorage.getItem('hostId');
     if (!hostId) {
@@ -64,9 +69,11 @@ window.addEventListener("load", async function(event) {
 
     let findPoeModel = function() {
         let pathName = decodeURIComponent(window.location.pathname);
-        let model = pathName.substring(1)
+        let model = pathName.substring(1).trim();
 
-        console.log("Found Poe model " + model);
+        if (model.length) {
+            console.log("Found Poe model [" + model +"]");
+        }
         return model;
     }
 
@@ -116,7 +123,7 @@ window.addEventListener("load", async function(event) {
 
     let currService = {
         clientId: getId(),
-        hostId: getHostId(),
+        hostId: await getHostId(),
 
         model: null,
         target: null,
@@ -142,7 +149,7 @@ window.addEventListener("load", async function(event) {
         }
 
         if (!currService.hostId) {
-            currService.hostId = getHostId()
+            currService.hostId = await getHostId()
         }
 
         if (!currService.clientId) {
