@@ -11,6 +11,7 @@ function escapeHtml(html) {
 
 let LLM_SERVICE="http://127.0.0.1:3010/";
 
+let modelMap = {};
 
 chrome.runtime.onMessage.addListener(async function(message, sender, sendResponse) {
 
@@ -18,13 +19,23 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
     if (message.message === "snapshot" ||
         message.message === "announce") {
 
-        console.log("Background got " + message.message)
-        console.log(message)
+        console.log("Background got " + message.message + " " + message.service + " " + message.model)
+        //console.log(message)
 
         if (message.data) {
             message.data = escapeHtml(message.data);
         }
 
+
+        if (message.message === "announce") {
+            let models = modelMap[message.service + "." + message.model];
+            if (!models) {
+                models = modelMap[message.service + "." + message.model] = {};
+            }
+            models[message.clientId] = message;
+
+            //console.log(modelMap);
+        }
 
         try {
 
