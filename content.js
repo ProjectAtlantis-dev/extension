@@ -19,6 +19,19 @@ function getId() {
     return clientId;
 }
 
+function getHostId() {
+
+    return navigator.userAgent;
+    /*
+    let hostId = localStorage.getItem('hostId');
+    if (!hostId) {
+        localStorage.setItem('hostId', uuidv4());
+        hostId = localStorage.getItem('hostId');
+    }
+
+    return hostId;
+    */
+}
 
 
 
@@ -102,7 +115,14 @@ window.addEventListener("load", async function(event) {
 
 
     let currService = {
-        clientId: getId()
+        clientId: getId(),
+        hostId: getHostId(),
+
+        model: null,
+        target: null,
+        priorText: null,
+        announced: false
+
     }
 
     setInterval(async function() {
@@ -114,25 +134,15 @@ window.addEventListener("load", async function(event) {
             currentUrl = window.location.href;
             //console.log('URL has been changed!');
 
-            if (currService) {
-                currService.model = null;
-                currService.target = null;
-                currService.priorText = null;
-                currService.announced = false;
-            }
+            currService.model = null;
+            currService.target = null;
+            currService.priorText = null;
+            currService.announced = false;
+
         }
 
-        if (!currService) {
-            let clientId = getId();
-
-            currService = {
-                clientId,
-                model: null,
-                target: null,
-                priorText: null,
-                announced: false
-            }
-
+        if (!currService.hostId) {
+            currService.hostId = getHostId()
         }
 
         if (!currService.clientId) {
@@ -162,6 +172,7 @@ window.addEventListener("load", async function(event) {
 
             try {
                 let announceMsg = {
+                    hostId: currService.hostId,
                     clientId: currService.clientId,
                     service: currService.service,
                     model: currService.model,
@@ -221,6 +232,7 @@ window.addEventListener("load", async function(event) {
             console.log("Sending snapshot")
             try {
                 let unused = await chrome.runtime.sendMessage({
+                    hostId: currService.hostId,
                     clientId: currService.clientId,
                     service: currService.service,
                     model: currService.model,

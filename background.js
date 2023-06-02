@@ -20,7 +20,7 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
         message.message === "announce") {
 
         console.log("Background got " + message.message + " " + message.service + " " + message.model)
-        //console.log(message)
+        console.log(message)
 
         if (message.data) {
             message.data = escapeHtml(message.data);
