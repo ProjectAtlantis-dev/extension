@@ -27,15 +27,7 @@ async function getHostId() {
     }
 
     return navigator.userAgent + braveTag;
-    /*
-    let hostId = localStorage.getItem('hostId');
-    if (!hostId) {
-        localStorage.setItem('hostId', uuidv4());
-        hostId = localStorage.getItem('hostId');
-    }
 
-    return hostId;
-    */
 }
 
 

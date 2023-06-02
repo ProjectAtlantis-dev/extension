@@ -9,12 +9,35 @@ function escapeHtml(html) {
                .replace(/"/g, '\\"')
 }
 
-let LLM_SERVICE="http://127.0.0.1:3010/";
+
 
 let modelMap = {};
 
-chrome.runtime.onMessage.addListener(async function(message, sender, sendResponse) {
+let socket = new WebSocket('ws://127.0.0.1:3020/');
 
+// Connection opened
+socket.addEventListener('open', function (event) {
+    console.log('Connection opened to LLM service');
+});
+
+// Listen for messages
+socket.addEventListener('message', function (event) {
+    console.log('Message from server: ', event.data);
+});
+
+// Listen for close event
+socket.addEventListener('close', function(event) {
+    console.log('LLM service connection closed', event);
+});
+
+// Connection error
+socket.addEventListener('error', function (event) {
+    console.log('Connection error: ', event);
+});
+
+
+
+chrome.runtime.onMessage.addListener(async function(message, sender, sendResponse) {
 
     if (message.message === "snapshot" ||
         message.message === "announce") {
@@ -39,23 +62,8 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
 
         try {
 
-            // http://127.0.0.1:3010/llm_announce
-            let url = LLM_SERVICE + "llm_" + message.message;
-            console.log("Sending to " + url);
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(message)
-            });
+            socket.send(JSON.stringify(message));
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json(); // this parses the JSON response
-            //console.log(data);
         } catch (error) {
             console.log('Error:', error);
         }
