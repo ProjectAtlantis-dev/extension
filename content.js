@@ -27,8 +27,10 @@ window.addEventListener("load", async function(event) {
 
 
     let currentUrl = "";
-    console.log("Foo extension loaded")
 
+
+    let currDate = new Date();
+    console.log("Atlantis browser extension loaded at " + currDate.getHours() + ":" + currDate.getMinutes() + ":" + currDate.getSeconds())
 
 
     let findService = function(currService) {
@@ -67,7 +69,7 @@ window.addEventListener("load", async function(event) {
             params[key] = value;
         });
 
-        console.log(params)
+        //console.log(params)
         return params;
     }
 
@@ -165,7 +167,7 @@ window.addEventListener("load", async function(event) {
                     model: currService.model,
                     message: "announce"
                 }
-                console.log(announceMsg)
+                //console.log(announceMsg)
                 let unused = await chrome.runtime.sendMessage(announceMsg);
                 currService.announced = true;
             } catch (err) {
@@ -194,8 +196,8 @@ window.addEventListener("load", async function(event) {
                 }
             } else if (currService.service === "openai") {
                 let targets = document.querySelectorAll(`div[class^="react-scroll-to-bottom--css"]`);
-                console.log(targets.length + " target(s) found");
-                console.log(targets)
+                //console.log(targets.length + " target(s) found");
+                //console.log(targets)
 
                 if (targets.length === 2) {
 
