@@ -248,7 +248,128 @@ window.addEventListener("load", async function(event) {
 
     } ,1000)
 
+    chrome.runtime.onMessage.addListener(
+        function(request, sender, sendResponse) {
+            console.log("Got message from background");
+            console.log(request);
 
+            if (currService.service === "poe") {
+                /*
+                let targets = document.querySelectorAll(`div[class^="InfiniteScroll_container"]`);
+                //console.log(targets.length + " target(s) found");
+
+                if (targets.length === 1) {
+
+                    currService.target = targets[0]
+
+                    console.log("LLM target found");
+
+                } else {
+                    //console.log("Target not found")
+                    return;
+                }
+                */
+
+            } else if (currService.service === "openai") {
+
+                let prompt = document.getElementById('prompt-textarea');
+
+                if (!prompt) {
+                    console.log("Unable to find input widget");
+                    return;
+                }
+
+                /*
+                prompt.value = request.data;
+
+
+
+                let enclosingForm = prompt.closest('form');
+
+                if (enclosingForm) {
+                    // enclosingForm.submit();
+
+                    let ke = new KeyboardEvent('keydown', {
+                        key: 'Enter',
+                        keyCode: 13,
+                        bubbles: true
+                    });
+                    enclosingForm.dispatchEvent(ke);
+                }
+                */
+
+                function setNativeValue(element, value) {
+                    const { set: valueSetter } = Object.getOwnPropertyDescriptor(element, 'value') || {}
+                    const prototype = Object.getPrototypeOf(element)
+                    const { set: prototypeValueSetter } = Object.getOwnPropertyDescriptor(prototype, 'value') || {}
+
+                    if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+                        prototypeValueSetter.call(element, value)
+                    } else if (valueSetter) {
+                        valueSetter.call(element, value)
+                    } else {
+                        throw new Error('The given element does not have a value setter')
+                    }
+                }
+
+                setNativeValue(prompt, request.data);
+                prompt.dispatchEvent(new Event('input', { bubbles: true }))
+
+                /*
+                {
+                    let ke = new KeyboardEvent('keydown', {
+                        key: 'Enter',
+                        keyCode: 13,
+                        bubbles: true
+                    });
+                    prompt.dispatchEvent(ke);
+                }
+                */
+
+                let parentElement = prompt.parentElement;
+                let firstButton = parentElement.querySelector('button');
+                if (firstButton) {
+                    /*
+                    firstButton.disabled = false;
+
+                    {
+                        let ke = new KeyboardEvent('keydown', {
+                            key: 'Enter',
+                            keyCode: 13,
+                            bubbles: true
+                        });
+                        firstButton.dispatchEvent(ke);
+                    }
+                    */
+                    firstButton.click();
+
+                } else {
+                    console.log("Button not found")
+                }
+
+
+                /*
+                let targets = document.querySelectorAll(`div[class^="react-scroll-to-bottom--css"]`);
+                //console.log(targets.length + " target(s) found");
+                //console.log(targets)
+
+                if (targets.length === 2) {
+
+                    currService.target = targets[1]
+
+                    console.log("LLM target found");
+
+                } else {
+                    //console.log("Target not found")
+                    return;
+                }
+                */
+            } else {
+
+            }
+
+        }
+    );
 
         /*
         const textareas = document.querySelectorAll('textarea[placeholder^="Talk to"]');

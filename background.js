@@ -12,6 +12,7 @@ function escapeHtml(html) {
 
 
 let modelMap = {};
+let senderMap = {};
 
 let socket;
 
@@ -25,6 +26,7 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
     console.log(message)
 
     modelMap[message.clientId] = message;
+    senderMap[message.clientId] = sender.tab;
 
     console.log(modelMap)
 
@@ -46,6 +48,11 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
                 let payload = JSON.parse(event.data);
 
                 console.log(payload)
+
+                let origTab = senderMap[payload.clientId];
+                chrome.tabs.sendMessage(origTab.id, {
+                    data: payload.data
+                });
 
             });
 
