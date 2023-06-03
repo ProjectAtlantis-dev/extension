@@ -42,7 +42,11 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
 
             // Listen for messages
             socket.addEventListener('message', function (event) {
-                console.log('Message from server: ', event);
+                console.log('Message from server: ', event.data);
+                let payload = JSON.parse(event.data);
+
+                console.log(payload)
+
             });
 
             // Listen for close event
