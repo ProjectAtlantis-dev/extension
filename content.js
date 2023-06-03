@@ -10,10 +10,10 @@ function uuidv4() {
 
 function getId() {
 
-    let clientId = sessionStorage.getItem('clientId');
+    let clientId = localStorage.getItem('clientId');
     if (!clientId) {
-        sessionStorage.setItem('clientId', uuidv4());
-        clientId = sessionStorage.getItem('clientId');
+        localStorage.setItem('clientId', uuidv4());
+        clientId = localStorage.getItem('clientId');
     }
 
     return clientId;
@@ -198,7 +198,7 @@ window.addEventListener("load", async function(event) {
 
                     currService.target = targets[0]
 
-                    console.log("LLM target found");
+                    console.log("Content found");
 
                 } else {
                     //console.log("Target not found")
@@ -213,7 +213,7 @@ window.addEventListener("load", async function(event) {
 
                     currService.target = targets[1]
 
-                    console.log("LLM target found");
+                    console.log("Content found");
 
                 } else {
                     //console.log("Target not found")
@@ -246,7 +246,44 @@ window.addEventListener("load", async function(event) {
         }
 
 
-    } ,1000)
+    } ,1000);
+
+    function setNativeValue(element, value) {
+        const { set: valueSetter } = Object.getOwnPropertyDescriptor(element, 'value') || {}
+        const prototype = Object.getPrototypeOf(element)
+        const { set: prototypeValueSetter } = Object.getOwnPropertyDescriptor(prototype, 'value') || {}
+
+        if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+            prototypeValueSetter.call(element, value)
+        } else if (valueSetter) {
+            valueSetter.call(element, value)
+        } else {
+            throw new Error('The given element does not have a value setter')
+        }
+    }
+
+    function findClassWithPrefix(element, prefix) {
+        let elementsWithPrefix = [];
+
+        function searchChildNodes(node) {
+            // Check each class in the class list
+            for (let i = 0; i < node.classList.length; i++) {
+                if (node.classList[i].startsWith(prefix)) {
+                    elementsWithPrefix.push(node);
+                    break; // We found a match, no need to check other classes
+                }
+            }
+
+            // Search child nodes
+            for (let i = 0; i < node.childNodes.length; i++) {
+                searchChildNodes(node.childNodes[i]);
+            }
+        }
+
+        searchChildNodes(element);
+
+        return elementsWithPrefix;
+    }
 
     chrome.runtime.onMessage.addListener(
         function(request, sender, sendResponse) {
@@ -254,21 +291,41 @@ window.addEventListener("load", async function(event) {
             console.log(request);
 
             if (currService.service === "poe") {
-                /*
-                let targets = document.querySelectorAll(`div[class^="InfiniteScroll_container"]`);
-                //console.log(targets.length + " target(s) found");
+
+                let targets = document.querySelectorAll(`div[class^="ChatMessageInputContainer_inputContainer"]`);
+                console.log(targets.length + " input target(s) found");
 
                 if (targets.length === 1) {
 
-                    currService.target = targets[0]
+                    let container = targets[0]
 
-                    console.log("LLM target found");
+                    console.log("Input widget found");
+
+                    let prompt = container.querySelector(`textarea`);
+
+                    if (prompt) {
+
+                        setNativeValue(prompt, request.data);
+                        prompt.dispatchEvent(new Event('input', { bubbles: true }))
+
+                        let buttons = findClassWithPrefix(container, 'ChatMessageSendButton_sendButton');
+
+                        if (buttons.length) {
+                            let firstButton = buttons[0];
+                            firstButton.click();
+                        } else {
+                            console.log("No button(s) found")
+                            console.log(container)
+                        }
+                    } else {
+                        console.log("No prompt found")
+                    }
 
                 } else {
-                    //console.log("Target not found")
+                    console.log("Input widget not found")
                     return;
                 }
-                */
+
 
             } else if (currService.service === "openai") {
 
@@ -298,19 +355,6 @@ window.addEventListener("load", async function(event) {
                 }
                 */
 
-                function setNativeValue(element, value) {
-                    const { set: valueSetter } = Object.getOwnPropertyDescriptor(element, 'value') || {}
-                    const prototype = Object.getPrototypeOf(element)
-                    const { set: prototypeValueSetter } = Object.getOwnPropertyDescriptor(prototype, 'value') || {}
-
-                    if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
-                        prototypeValueSetter.call(element, value)
-                    } else if (valueSetter) {
-                        valueSetter.call(element, value)
-                    } else {
-                        throw new Error('The given element does not have a value setter')
-                    }
-                }
 
                 setNativeValue(prompt, request.data);
                 prompt.dispatchEvent(new Event('input', { bubbles: true }))
@@ -364,7 +408,9 @@ window.addEventListener("load", async function(event) {
                     return;
                 }
                 */
+
             } else {
+
 
             }
 
