@@ -10,10 +10,10 @@ function uuidv4() {
 
 function getId() {
 
-    let clientId = localStorage.getItem('clientId');
+    let clientId = sessionStorage.getItem('atlantis.clientId');
     if (!clientId) {
-        localStorage.setItem('clientId', uuidv4());
-        clientId = localStorage.getItem('clientId');
+        sessionStorage.setItem('atlantis.clientId', uuidv4());
+        clientId = sessionStorage.getItem('atlantis.clientId');
     }
 
     return clientId;
