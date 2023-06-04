@@ -11,7 +11,7 @@ function escapeHtml(html) {
 
 
 
-let modelMap = {};
+
 let senderMap = {};
 
 let socket;
@@ -25,10 +25,9 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
     console.log("Background got " + message.message + " " + message.service + " " + message.model)
     console.log(message)
 
-    modelMap[message.clientId] = message;
+
     senderMap[message.clientId] = sender.tab;
 
-    console.log(modelMap)
 
     let getSocket = async function() {
         if (!socket) {
@@ -87,11 +86,15 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
                         if (delay > 500) {
                             console.log('Connected to LLM service');
                         }
+                        delay = 500;
                         resolve(true);
                     } else {
                         // back off and try again
                         console.log('No LLM service connection');
-                        delay *= 2;
+
+                        if (delay < 10000) {
+                            delay *= 2;
+                        }
                         setTimeout(trySocket, delay)
                     }
                 }
@@ -117,16 +120,16 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
         message.data = escapeHtml(message.data);
     }
 
-
-    if (message.message === "announce") {
-        let models = modelMap[message.service + "." + message.model];
-        if (!models) {
-            models = modelMap[message.service + "." + message.model] = {};
-        }
-        models[message.clientId] = message;
-
-        //console.log(modelMap);
+    // try to guess browser
+    let clientType = "Chrome";
+    if (message.hostId.indexOf("Edg")>= 0) {
+        clientType = "Edge"
+    } else if (message.hostId.indexOf("Brave")>= 0) {
+        clientType = "Brave"
     }
+    message.clientType = clientType;
+
+
 
     try {
 
