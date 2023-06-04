@@ -118,9 +118,9 @@ window.addEventListener("load", async function(event) {
         hostId: await getHostId(),
 
         model: null,
-        target: null,
-        priorText: null,
-        announced: false
+        outputTarget: null,
+        inputTarget: null,
+        priorText: null
 
     }
 
@@ -134,9 +134,9 @@ window.addEventListener("load", async function(event) {
             //console.log('URL has been changed!');
 
             currService.model = null;
-            currService.target = null;
+            currService.outputTarget = null;
+            currService.inputTarget = null;
             currService.priorText = null;
-            currService.announced = false;
 
         }
 
@@ -167,28 +167,91 @@ window.addEventListener("load", async function(event) {
         }
 
 
-        if (!currService.announced) {
 
-            try {
-                let announceMsg = {
-                    hostId: currService.hostId,
-                    clientId: currService.clientId,
-                    service: currService.service,
-                    model: currService.model,
-                    message: "announce"
+        if (!currService.inputTarget) {
+            if (currService.service === "poe") {
+
+                let targets = document.querySelectorAll(`div[class^="ChatMessageInputContainer_inputContainer"]`);
+                console.log(targets.length + " input target(s) found");
+
+                if (targets.length === 1) {
+
+                    let container = targets[0]
+
+                    let prompt = container.querySelector(`textarea`);
+
+                    if (prompt) {
+
+                        let buttons = findClassWithPrefix(container, 'ChatMessageSendButton_sendButton');
+
+                        if (buttons.length) {
+                            let firstButton = buttons[0];
+
+                            if (firstButton) {
+                                console.log("Input target found");
+                                currService.inputTarget = prompt;
+                            }
+
+                        } else {
+                            console.log("No button(s) found")
+                            return;
+                        }
+                    } else {
+                        console.log("No prompt found")
+                        return;
+                    }
+
+                } else {
+                    console.log("Input target not found")
+                    return;
                 }
-                //console.log(announceMsg)
-                let unused = await chrome.runtime.sendMessage(announceMsg);
-                currService.announced = true;
-            } catch (err) {
-                console.log(err.toString())
+
+
+            } else if (currService.service === "openai") {
+
+                let prompt = document.getElementById('prompt-textarea');
+
+                if (!prompt) {
+                    console.log("Unable to find input target");
+                    return;
+                }
+
+                let parentElement = prompt.parentElement;
+                let firstButton = parentElement.querySelector('button');
+                if (firstButton) {
+
+                    console.log("Input target found");
+                    currService.inputTarget = prompt;
+
+                } else {
+                    console.log("Button not found")
+                    return;
+                }
+
+            } else {
                 return;
             }
-
-
         }
 
-        if (!currService.target) {
+        // if we get here we can at least announce/heartbeat
+        try {
+            let announceMsg = {
+                hostId: currService.hostId,
+                clientId: currService.clientId,
+                service: currService.service,
+                model: currService.model,
+                message: "announce"
+            }
+            //console.log(announceMsg)
+            let unused = await chrome.runtime.sendMessage(announceMsg);
+            currService.announced = true;
+        } catch (err) {
+            console.log(err.toString())
+            return;
+        }
+
+
+        if (!currService.outputTarget) {
 
             if (currService.service === "poe") {
                 let targets = document.querySelectorAll(`div[class^="InfiniteScroll_container"]`);
@@ -196,13 +259,14 @@ window.addEventListener("load", async function(event) {
 
                 if (targets.length === 1) {
 
-                    currService.target = targets[0]
+                    currService.outputTarget = targets[0]
 
-                    console.log("Content found");
+                    console.log("Output content found");
 
                 } else {
-                    //console.log("Target not found")
+                    console.log("Output content not found")
                     return;
+
                 }
             } else if (currService.service === "openai") {
                 let targets = document.querySelectorAll(`div[class^="react-scroll-to-bottom--css"]`);
@@ -211,22 +275,26 @@ window.addEventListener("load", async function(event) {
 
                 if (targets.length === 2) {
 
-                    currService.target = targets[1]
+                    currService.outputTarget = targets[1]
 
-                    console.log("Content found");
+                    console.log("Output content found");
 
                 } else {
-                    //console.log("Target not found")
+                    console.log("Outut content target not found")
                     return;
                 }
 
             } else {
+                // no service found
                 return;
             }
 
         }
 
-        let latest = currService.target.innerText;
+
+        // if we get here we can send snapshot
+
+        let latest = currService.outputTarget.innerText;
         if (currService.priorText != latest) {
             console.log("Sending snapshot")
             try {
@@ -243,10 +311,12 @@ window.addEventListener("load", async function(event) {
             }
             //console.log("got result from background: " + result)
             currService.priorText = latest;
+        } else {
+
         }
 
 
-    } ,1000);
+    } ,5000);
 
     function setNativeValue(element, value) {
         const { set: valueSetter } = Object.getOwnPropertyDescriptor(element, 'value') || {}
@@ -267,6 +337,10 @@ window.addEventListener("load", async function(event) {
 
         function searchChildNodes(node) {
             // Check each class in the class list
+            if (!node.classList) {
+                return;
+            }
+
             for (let i = 0; i < node.classList.length; i++) {
                 if (node.classList[i].startsWith(prefix)) {
                     elementsWithPrefix.push(node);
@@ -275,8 +349,8 @@ window.addEventListener("load", async function(event) {
             }
 
             // Search child nodes
-            for (let i = 0; i < node.childNodes.length; i++) {
-                searchChildNodes(node.childNodes[i]);
+            for (let i = 0; i < node.children.length; i++) {
+                searchChildNodes(node.children[i]);
             }
         }
 
@@ -336,78 +410,19 @@ window.addEventListener("load", async function(event) {
                     return;
                 }
 
-                /*
-                prompt.value = request.data;
-
-
-
-                let enclosingForm = prompt.closest('form');
-
-                if (enclosingForm) {
-                    // enclosingForm.submit();
-
-                    let ke = new KeyboardEvent('keydown', {
-                        key: 'Enter',
-                        keyCode: 13,
-                        bubbles: true
-                    });
-                    enclosingForm.dispatchEvent(ke);
-                }
-                */
-
 
                 setNativeValue(prompt, request.data);
                 prompt.dispatchEvent(new Event('input', { bubbles: true }))
 
-                /*
-                {
-                    let ke = new KeyboardEvent('keydown', {
-                        key: 'Enter',
-                        keyCode: 13,
-                        bubbles: true
-                    });
-                    prompt.dispatchEvent(ke);
-                }
-                */
-
                 let parentElement = prompt.parentElement;
                 let firstButton = parentElement.querySelector('button');
                 if (firstButton) {
-                    /*
-                    firstButton.disabled = false;
-
-                    {
-                        let ke = new KeyboardEvent('keydown', {
-                            key: 'Enter',
-                            keyCode: 13,
-                            bubbles: true
-                        });
-                        firstButton.dispatchEvent(ke);
-                    }
-                    */
                     firstButton.click();
 
                 } else {
                     console.log("Button not found")
                 }
 
-
-                /*
-                let targets = document.querySelectorAll(`div[class^="react-scroll-to-bottom--css"]`);
-                //console.log(targets.length + " target(s) found");
-                //console.log(targets)
-
-                if (targets.length === 2) {
-
-                    currService.target = targets[1]
-
-                    console.log("LLM target found");
-
-                } else {
-                    //console.log("Target not found")
-                    return;
-                }
-                */
 
             } else {
 
@@ -416,96 +431,5 @@ window.addEventListener("load", async function(event) {
 
         }
     );
-
-        /*
-        const textareas = document.querySelectorAll('textarea[placeholder^="Talk to"]');
-        if (textareas.length) {
-            prompt = textareas[0];
-            if (prompt.placeholder.endsWith("on Poe")) {
-                console.log("starting Poe");
-
-                const messages =  document.querySelectorAll(`div[class^='ChatMessage_messageWrapper']`);
-                console.log(messages)
-
-
-
-
-                let prior = "";
-                let foo = async function() {
-
-                    let latest = main.innerText
-                    if (prior != latest) {
-                        console.log("Sending snapshot")
-                        let result = await chrome.runtime.sendMessage({
-                            message:"snapshot",
-                            data: latest
-                        });
-                        //console.log("got result from background: " + result)
-                        prior = latest
-                    }
-
-
-                    element.value = result
-
-                    const ke = new KeyboardEvent('keydown', {
-                        key: 'Enter',
-                        keyCode: 13,
-                        bubbles: true
-                    });
-                    element.dispatchEvent(ke);
-
-                    setTimeout(foo,5000)
-                }
-                setTimeout(foo,5000)
-
-            }
-        }
-        */
-
-
-        // Check for the existence of an element
-        /*
-        var prompt = document.getElementById('prompt-textarea');
-        let main = document.querySelector("main")
-
-
-        let prior = "";
-        let foo = async function() {
-
-            let latest = main.innerText
-            if (prior != latest) {
-                console.log("Sending snapshot")
-                let result = await chrome.runtime.sendMessage({
-                    message:"snapshot",
-                    data: latest
-                });
-                //console.log("got result from background: " + result)
-                prior = latest
-            }
-
-
-            element.value = result
-
-            const ke = new KeyboardEvent('keydown', {
-                key: 'Enter',
-                keyCode: 13,
-                bubbles: true
-            });
-            element.dispatchEvent(ke);
-
-            setTimeout(foo,5000)
-        }
-        setTimeout(foo,5000)
-        */
-        /*
-        prompt.addEventListener('focus', async function(event) {
-            console.log('Element has received focus:', event.target);
-
-            let result = await chrome.runtime.sendMessage({
-                message:"ready"
-            });
-
-         });
-         */
 
 });

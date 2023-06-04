@@ -32,14 +32,27 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
 
     let getSocket = async function() {
         if (!socket) {
-            socket = new WebSocket('ws://127.0.0.1:3020/');
+            try {
+                socket = new WebSocket('ws://127.0.0.1:3020/');
+
+                // Connection error
+                socket.addEventListener('error', function (event) {
+                    console.log('Connection error: ', event);
+                });
+
+            } catch (err) {
+                reject(err.toString())
+            }
 
             let p = new Promise(function(resolve, reject) {
+
                 // Connection opened
                 socket.addEventListener('open', function (event) {
                     console.log('Connection opened to LLM service');
                     resolve(true);
                 });
+
+
             });
 
             // Listen for messages
@@ -62,10 +75,7 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
                 socket = null;
             });
 
-            // Connection error
-            socket.addEventListener('error', function (event) {
-                console.log('Connection error: ', event);
-            });
+
 
             return p;
         } else {
@@ -95,47 +105,37 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
         }
     }
 
-    await getSocket();
-
-
-    if (message.message === "snapshot" ||
-        message.message === "announce") {
-
-        console.log("Background got " + message.message + " " + message.service + " " + message.model)
-        console.log(message)
-
-        if (message.data) {
-            message.data = escapeHtml(message.data);
-        }
-
-
-        if (message.message === "announce") {
-            let models = modelMap[message.service + "." + message.model];
-            if (!models) {
-                models = modelMap[message.service + "." + message.model] = {};
-            }
-            models[message.clientId] = message;
-
-            //console.log(modelMap);
-        }
-
-        try {
-
-            // send 'message'
-            socket.send(JSON.stringify(message));
-
-        } catch (error) {
-            console.log('Error:', error);
-        }
-
-
-    } else {
-
-        console.log("Got unrecognized message");
-        console.log(message)
-
+    try {
+        await getSocket();
+    } catch (err) {
+        console.log("ERROR: " + err.toString())
+        return;
     }
 
+
+    if (message.data) {
+        message.data = escapeHtml(message.data);
+    }
+
+
+    if (message.message === "announce") {
+        let models = modelMap[message.service + "." + message.model];
+        if (!models) {
+            models = modelMap[message.service + "." + message.model] = {};
+        }
+        models[message.clientId] = message;
+
+        //console.log(modelMap);
+    }
+
+    try {
+
+        // send 'message'
+        socket.send(JSON.stringify(message));
+
+    } catch (error) {
+        console.log('Error:', error);
+    }
 
 
 });
