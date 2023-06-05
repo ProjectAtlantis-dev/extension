@@ -22,8 +22,8 @@ let socket;
 chrome.runtime.onMessage.addListener(async function(message, sender, sendResponse) {
 
 
-    console.log("Background got " + message.message + " " + message.service + " " + message.model)
-    console.log(message)
+    //console.log("Background got " + message.message + " " + message.service + " " + message.model)
+    //console.log(message)
 
 
     senderMap[message.clientId] = sender.tab;
@@ -54,17 +54,17 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
 
             });
 
-            // Listen for messages
+            // Listen for messages from server
             socket.addEventListener('message', function (event) {
-                console.log('Message from server: ', event.data);
+                console.log('Message from server');
                 let payload = JSON.parse(event.data);
-
                 console.log(payload)
 
+                // track by request id ?
+
+                // send to browser tab
                 let origTab = senderMap[payload.clientId];
-                chrome.tabs.sendMessage(origTab.id, {
-                    data: payload.data
-                });
+                chrome.tabs.sendMessage(origTab.id, payload);
 
             });
 

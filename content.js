@@ -41,7 +41,7 @@ window.addEventListener("load", async function(event) {
 
     let currDate = new Date();
     console.log("Atlantis browser extension loaded at " + currDate.getHours() + ":" + currDate.getMinutes() + ":" + currDate.getSeconds())
-
+    console.log("Client id is " + getId());
 
     let findService = function(currService) {
         let currentUrl = window.location.href;
@@ -120,8 +120,9 @@ window.addEventListener("load", async function(event) {
         model: null,
         outputTarget: null,
         inputTarget: null,
-        priorText: null
+        priorText: null,
 
+        requestId: null
     }
 
     setInterval(async function() {
@@ -137,7 +138,7 @@ window.addEventListener("load", async function(event) {
             currService.outputTarget = null;
             currService.inputTarget = null;
             currService.priorText = null;
-
+            currService.requestId = null;
         }
 
         if (!currService.hostId) {
@@ -302,6 +303,7 @@ window.addEventListener("load", async function(event) {
                     hostId: currService.hostId,
                     clientId: currService.clientId,
                     service: currService.service,
+                    requestId: currService.requestId,
                     model: currService.model,
                     message: "snapshot",
                     data: latest
@@ -363,6 +365,8 @@ window.addEventListener("load", async function(event) {
         function(request, sender, sendResponse) {
             console.log("Got message from background");
             console.log(request);
+
+            currService.requestId = request.requestId;
 
             if (currService.service === "poe") {
 
