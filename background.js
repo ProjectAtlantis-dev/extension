@@ -18,7 +18,7 @@ let socket;
 
 
 chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
-    console.log(`Tab id: ${tabId} was closed`);
+    //console.log(`Tab id: ${tabId} was closed`);
 
     Object.keys(senderMap).map(function(clientId) {
         let tab = senderMap[clientId];
