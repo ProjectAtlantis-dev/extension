@@ -17,6 +17,30 @@ let senderMap = {};
 let socket;
 
 
+chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
+    console.log(`Tab id: ${tabId} was closed`);
+
+    Object.keys(senderMap).map(function(clientId) {
+        let tab = senderMap[clientId];
+        if (tabId === tab.id) {
+            console.log("Client " + clientId + " was closed")
+            try {
+
+                // send 'message'
+                let message = {
+                    message: 'terminated',
+                    clientId
+                }
+                socket.send(JSON.stringify(message));
+
+            } catch (error) {
+                console.log('Error:', error);
+            }
+
+        }
+
+    });
+});
 
 
 chrome.runtime.onMessage.addListener(async function(message, sender, sendResponse) {
