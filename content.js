@@ -349,6 +349,14 @@ window.addEventListener("load", async function(event) {
 
         if (doSend) {
 
+            /*
+            if (currService.service === "openai" && buffer.startsWith("ChatGPT")) {
+                buffer = buffer.substring("ChatGPT".length-1).trim();
+            } else {
+                buffer = buffer.trim();
+            }
+            */
+
             console.log("Sending snapshot")
             try {
                 let unused = await chrome.runtime.sendMessage({
