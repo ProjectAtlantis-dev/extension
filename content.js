@@ -357,7 +357,7 @@ window.addEventListener("load", async function(event) {
             }
             */
 
-            console.log("Sending snapshot")
+            console.log("Sending snapshot: " + buffer)
             try {
                 let unused = await chrome.runtime.sendMessage({
                     hostId: currService.hostId,
@@ -375,7 +375,7 @@ window.addEventListener("load", async function(event) {
 
         } else {
             console.log("did not send")
-            console.log(snap)
+            //console.log(snap)
         }
 
         lastSnap = snap;
