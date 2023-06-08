@@ -126,6 +126,7 @@ window.addEventListener("load", async function(event) {
     }
 
     let latest = 0;
+    let lastSnap = "";
 
     setInterval(async function() {
         //console.log("Running page scan")
@@ -317,7 +318,36 @@ window.addEventListener("load", async function(event) {
 
         // if we get here we can send snapshot
         let snap = currService.outputTarget.innerText;
-        if (snap.length > latest) {
+
+        // see if content totally changed since last snap
+        let doSend = false;
+        let buffer;
+        if (snap.length > lastSnap.length) {
+
+            if (lastSnap.substring(0,20) === snap.substring(0,20)) {
+                // just send delta
+                buffer = snap.substring(lastSnap.length-1)
+                doSend = true
+            } else {
+                console.log("snap content reset (different content")
+                // very different
+                buffer = snap;
+                doSend = true
+            }
+        } else {
+
+            if (lastSnap.substring(0,20) === snap.substring(0,20)) {
+                // do nothing
+
+            } else {
+                console.log("snap content reset (different content")
+                // very different
+                buffer = snap;
+                doSend = true
+            }
+        }
+
+        if (doSend) {
 
             console.log("Sending snapshot")
             try {
@@ -328,18 +358,20 @@ window.addEventListener("load", async function(event) {
                     requestId: currService.requestId,
                     model: currService.model,
                     message: "snapshot",
-                    data: snap
+                    data: buffer
                 });
 
             } catch (err) {
                 console.log("ERROR: " + err.toString())
             }
 
-            latest += snap.length-1;
-
         } else {
-            //console.log("Output target inner text has no length")
+            console.log("did not send")
+            console.log(snap)
         }
+
+        lastSnap = snap;
+
 
 
     } ,5000);
