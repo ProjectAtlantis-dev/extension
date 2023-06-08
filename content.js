@@ -120,13 +120,15 @@ window.addEventListener("load", async function(event) {
         model: null,
         outputTarget: null,
         inputTarget: null,
-        priorText: null,
+        //priorText: null,
 
         requestId: null
     }
 
-    setInterval(async function() {
+    let latest = 0;
 
+    setInterval(async function() {
+        //console.log("Running page scan")
 
         if (window.location.href !== currentUrl) {
             //console.log("LLM service scanning " + window.location.href + " " + currentUrl)
@@ -137,7 +139,7 @@ window.addEventListener("load", async function(event) {
             currService.model = null;
             currService.outputTarget = null;
             currService.inputTarget = null;
-            currService.priorText = null;
+            //currService.priorText = null;
             currService.requestId = null;
         }
 
@@ -170,6 +172,8 @@ window.addEventListener("load", async function(event) {
 
 
         if (!currService.inputTarget) {
+            console.log("Lacking input target")
+
             if (currService.service === "poe") {
 
                 let targets = document.querySelectorAll(`div[class^="ChatMessageInputContainer_inputContainer"]`);
@@ -232,9 +236,12 @@ window.addEventListener("load", async function(event) {
             } else {
                 return;
             }
+
+
         }
 
         // if we get here we can at least announce/heartbeat
+        //console.log("Sending announce")
         try {
             let announceMsg = {
                 hostId: currService.hostId,
@@ -253,6 +260,7 @@ window.addEventListener("load", async function(event) {
 
 
         if (!currService.outputTarget) {
+            console.log("Lacking output target")
 
             if (currService.service === "poe") {
                 let targets = document.querySelectorAll(`div[class^="InfiniteScroll_container"]`);
@@ -293,10 +301,13 @@ window.addEventListener("load", async function(event) {
         }
 
 
-        // if we get here we can send snapshot
 
-        let latest = currService.outputTarget.innerText;
-        if (currService.priorText != latest) {
+
+
+        // if we get here we can send snapshot
+        let snap = currService.outputTarget.innerText;
+        if (snap.length > latest) {
+
             console.log("Sending snapshot")
             try {
                 let unused = await chrome.runtime.sendMessage({
@@ -306,15 +317,17 @@ window.addEventListener("load", async function(event) {
                     requestId: currService.requestId,
                     model: currService.model,
                     message: "snapshot",
-                    data: latest
+                    data: snap
                 });
+
             } catch (err) {
                 console.log("ERROR: " + err.toString())
             }
-            //console.log("got result from background: " + result)
-            currService.priorText = latest;
-        } else {
 
+            latest += snap.length-1;
+
+        } else {
+            //console.log("Output target inner text has no length")
         }
 
 
