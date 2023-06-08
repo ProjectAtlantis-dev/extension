@@ -300,9 +300,20 @@ window.addEventListener("load", async function(event) {
 
         }
 
+        /*
+        var elements = document.querySelectorAll('button');
 
+        var targetButton = null;
 
+        for(var i = 0; i < elements.length; i++) {
+            if(elements[i].textContent.includes('Regenerate response')) {
+                targetButton = elements[i];
+                break;
+            }
+        }
 
+        console.log(targetButton);
+        */
 
         // if we get here we can send snapshot
         let snap = currService.outputTarget.innerText;
