@@ -159,6 +159,10 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
 
         if (message.message === "snapshot") {
             console.log("Sending START >>>>>" + message.data + "<<<<< END")
+        } else if (message.message === "announce") {
+            console.log("Sending announce " + message.service + " " + message.model)
+        } else if (message.message === "ping") {
+            console.log("Sending ping " + message.requestId)
         }
 
         // send 'message'

@@ -118,7 +118,8 @@ window.addEventListener("load", async function(event) {
         hostId: await getHostId(),
         model: null,
 
-        requestId: null
+        requestId: null,
+        prompt: null
     }
 
 
@@ -328,6 +329,7 @@ window.addEventListener("load", async function(event) {
         // if we get here we can send snapshot
         let snap = outputTarget.innerText;
         if (currService.service === "poe") {
+
             // we don't want the feedback buttons or suggested replies
             feedback = snap.lastIndexOf("Share\nLike\nDislike");
             if (feedback) {
@@ -341,6 +343,25 @@ window.addEventListener("load", async function(event) {
             baselineSnap = snap;
             baselineSnapDate = snapDate;
 
+            if (currService.requestId) {
+                try {
+                    let unused = await chrome.runtime.sendMessage({
+                        hostId: currService.hostId,
+                        clientId: currService.clientId,
+                        service: currService.service,
+                        model: currService.model,
+
+                        message: "ping",
+
+                        requestId: currService.requestId
+                    });
+
+                } catch (err) {
+                    console.log("ERROR: " + err.toString())
+                }
+            }
+
+
         } else {
 
             // no change since baseline; we are potentially idle
@@ -349,7 +370,7 @@ window.addEventListener("load", async function(event) {
             console.log("IDLE: " + elapsed);
 
 
-            if (elapsed < 5000) {
+            if (elapsed < 4000) {
                 // do nothing
             } else {
 
@@ -395,16 +416,27 @@ window.addEventListener("load", async function(event) {
 
                 if (doSend && (buffer != priorBufferSent)) {
 
-                    console.log("Sending snapshot: START >>>>" + buffer + "<<<< END")
+                    // make sure we don't send anything prior to the prompt
+                    let sendBuffer = buffer;
+                    let promptIdx = buffer.lastIndexOf(currService.prompt);
+                    if (promptIdx >= 0) {
+                        sendBuffer = buffer.substring(promptIdx);
+                    }
+
+                    console.log("Sending snapshot: START >>>>" + sendBuffer + "<<<< END")
                     try {
                         let unused = await chrome.runtime.sendMessage({
                             hostId: currService.hostId,
                             clientId: currService.clientId,
                             service: currService.service,
-                            requestId: currService.requestId,
                             model: currService.model,
+
                             message: "snapshot",
-                            data: buffer
+
+                            requestId: currService.requestId,
+                            prompt: currService.prompt,
+
+                            data: sendBuffer
                         });
 
                         priorBufferSent = buffer;
@@ -487,6 +519,8 @@ window.addEventListener("load", async function(event) {
                         prompt.dispatchEvent(new Event('input', { bubbles: true }))
 
                         let buttons = findClassWithPrefix(container, 'ChatMessageSendButton_sendButton');
+
+                        currService.prompt = request.data;
 
                         if (buttons.length) {
                             let firstButton = buttons[0];
