@@ -157,6 +157,10 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
 
     try {
 
+        if (message.message === "snapshot") {
+            console.log("Sending START >>>>>" + message.data + "<<<<< END")
+        }
+
         // send 'message'
         socket.send(JSON.stringify(message));
 

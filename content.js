@@ -116,17 +116,15 @@ window.addEventListener("load", async function(event) {
     let currService = {
         clientId: getId(),
         hostId: await getHostId(),
-
         model: null,
-        outputTarget: null,
-        inputTarget: null,
-        //priorText: null,
 
         requestId: null
     }
 
-    let latest = 0;
-    let lastSnap = "";
+
+    let baselineSnap = "";
+    let baselineSnapDate = null;
+    let priorBufferSent = "";
 
     setInterval(async function() {
         //console.log("Running page scan")
@@ -138,9 +136,6 @@ window.addEventListener("load", async function(event) {
             //console.log('URL has been changed!');
 
             currService.model = null;
-            currService.outputTarget = null;
-            currService.inputTarget = null;
-            //currService.priorText = null;
             currService.requestId = null;
         }
 
@@ -171,14 +166,14 @@ window.addEventListener("load", async function(event) {
         }
 
 
+        let getInputTarget = function() {
 
-        if (!currService.inputTarget) {
-            console.log("Lacking input target")
+            //console.log("Lacking input target")
 
             if (currService.service === "poe") {
 
                 let targets = document.querySelectorAll(`div[class^="ChatMessageInputContainer_inputContainer"]`);
-                console.log(targets.length + " input target(s) found");
+                //console.log(targets.length + " input target(s) found");
 
                 if (targets.length === 1) {
 
@@ -194,8 +189,8 @@ window.addEventListener("load", async function(event) {
                             let firstButton = buttons[0];
 
                             if (firstButton) {
-                                console.log("Input target found");
-                                currService.inputTarget = prompt;
+                                //console.log("Input target found");
+                                return prompt;
                             }
 
                         } else {
@@ -208,7 +203,7 @@ window.addEventListener("load", async function(event) {
                     }
 
                 } else {
-                    console.log("Input target not found")
+                    //console.log("Input target not found")
                     return;
                 }
 
@@ -218,7 +213,7 @@ window.addEventListener("load", async function(event) {
                 let prompt = document.getElementById('prompt-textarea');
 
                 if (!prompt) {
-                    console.log("Unable to find input target");
+                    //console.log("Unable to find input target");
                     return;
                 }
 
@@ -226,8 +221,8 @@ window.addEventListener("load", async function(event) {
                 let firstButton = parentElement.querySelector('button');
                 if (firstButton) {
 
-                    console.log("Input target found");
-                    currService.inputTarget = prompt;
+                    //console.log("Input target found");
+                    inputTarget = prompt;
 
                 } else {
                     console.log("Button not found")
@@ -240,6 +235,12 @@ window.addEventListener("load", async function(event) {
 
 
         }
+        let inputTarget = getInputTarget()
+        if (!inputTarget) {
+            // can briefly disappear while response is generating
+            return;
+        }
+
 
         // if we get here we can at least announce/heartbeat
         //console.log("Sending announce")
@@ -260,8 +261,9 @@ window.addEventListener("load", async function(event) {
         }
 
 
-        if (!currService.outputTarget) {
-            console.log("Lacking output target")
+        let getOutputTarget = function() {
+
+            //console.log("Lacking output target")
 
             if (currService.service === "poe") {
                 let targets = document.querySelectorAll(`div[class^="InfiniteScroll_container"]`);
@@ -269,12 +271,12 @@ window.addEventListener("load", async function(event) {
 
                 if (targets.length === 1) {
 
-                    currService.outputTarget = targets[0]
+                    //console.log("Output content found");
 
-                    console.log("Output content found");
+                    return targets[0];
 
                 } else {
-                    console.log("Output content not found")
+                    //console.log("Output content not found")
                     return;
 
                 }
@@ -285,9 +287,8 @@ window.addEventListener("load", async function(event) {
 
                 if (targets.length === 2) {
 
-                    currService.outputTarget = targets[1]
-
                     console.log("Output content found");
+                    return targets[1];
 
                 } else {
                     console.log("Outut content target not found")
@@ -299,6 +300,11 @@ window.addEventListener("load", async function(event) {
                 return;
             }
 
+        }
+        let outputTarget = getOutputTarget();
+        if (!outputTarget) {
+            // can briefly disappear while response is generating
+            return;
         }
 
         /*
@@ -316,73 +322,103 @@ window.addEventListener("load", async function(event) {
         console.log(targetButton);
         */
 
+
+
+
         // if we get here we can send snapshot
-        let snap = currService.outputTarget.innerText;
-
-        // see if content totally changed since last snap
-        let doSend = false;
-        let buffer;
-        if (snap.length > lastSnap.length) {
-
-            if (lastSnap.substring(0,20) === snap.substring(0,20)) {
-                // just send delta
-                buffer = snap.substring(lastSnap.length-1)
-                doSend = true
-            } else {
-                console.log("snap content reset (different content")
-                // very different
-                buffer = snap;
-                doSend = true
+        let snap = outputTarget.innerText;
+        if (currService.service === "poe") {
+            // we don't want the feedback buttons or suggested replies
+            feedback = snap.lastIndexOf("Share\nLike\nDislike");
+            if (feedback) {
+                snap = snap.substring(0, feedback-1);
             }
+        }
+        let snapDate = new Date();
+
+        if (snap != baselineSnap) {
+            // update baseline
+            baselineSnap = snap;
+            baselineSnapDate = snapDate;
+
         } else {
 
-            if (lastSnap.substring(0,20) === snap.substring(0,20)) {
+            // no change since baseline; we are potentially idle
+
+            let elapsed = snapDate - baselineSnapDate;
+            console.log("IDLE: " + elapsed);
+
+
+            if (elapsed < 5000) {
                 // do nothing
-
             } else {
-                console.log("snap content reset (different content")
-                // very different
-                buffer = snap;
-                doSend = true
+
+                // baseline hasn't changed in a while
+
+                // we need to send something but not sure what
+                let doSend = true
+                let buffer
+                if (!priorBufferSent) {
+                    // send everything
+                    buffer = snap;
+
+                } else {
+
+
+                    if (snap.length > priorBufferSent.length) {
+
+                        // make sure content didn't change
+                        if (priorBufferSent === snap.substring(priorBufferSent.length)) {
+                            console.log("Sending delta")
+                            // send delta
+                            buffer = snap.substring(priorBufferSent.length)
+                        } else {
+                            console.log("Sending everything due to some swapped content")
+                            buffer = snap
+                        }
+                    } else if (snap.length < priorBufferSent.length) {
+                        console.log("Sending everything due to short length")
+                        // send everything
+                        buffer = snap
+                    } else {
+                        if (snap != priorBufferSent) {
+                            console.log("Sending everything due to same length content change")
+                            // length did not change but content did; send everything
+                            buffer = snap
+                        } else {
+                            // do not send
+                            console.log("DO NOT SEND")
+                            doSend = false;
+                        }
+                    }
+                }
+
+                if (doSend && (buffer != priorBufferSent)) {
+
+                    console.log("Sending snapshot: START >>>>" + buffer + "<<<< END")
+                    try {
+                        let unused = await chrome.runtime.sendMessage({
+                            hostId: currService.hostId,
+                            clientId: currService.clientId,
+                            service: currService.service,
+                            requestId: currService.requestId,
+                            model: currService.model,
+                            message: "snapshot",
+                            data: buffer
+                        });
+
+                        priorBufferSent = buffer;
+                    } catch (err) {
+                        console.log("ERROR: " + err.toString())
+                    }
+                }
+
             }
+
         }
 
-        if (doSend) {
 
-            /*
-            if (currService.service === "openai" && buffer.startsWith("ChatGPT")) {
-                buffer = buffer.substring("ChatGPT".length-1).trim();
-            } else {
-                buffer = buffer.trim();
-            }
-            */
-
-            console.log("Sending snapshot: " + buffer)
-            try {
-                let unused = await chrome.runtime.sendMessage({
-                    hostId: currService.hostId,
-                    clientId: currService.clientId,
-                    service: currService.service,
-                    requestId: currService.requestId,
-                    model: currService.model,
-                    message: "snapshot",
-                    data: buffer
-                });
-
-            } catch (err) {
-                console.log("ERROR: " + err.toString())
-            }
-
-        } else {
-            console.log("did not send")
-            //console.log(snap)
-        }
-
-        lastSnap = snap;
-
-
-
-    } ,5000);
+    } ,2000);
 
     function setNativeValue(element, value) {
         const { set: valueSetter } = Object.getOwnPropertyDescriptor(element, 'value') || {}
@@ -435,7 +471,7 @@ window.addEventListener("load", async function(event) {
             if (currService.service === "poe") {
 
                 let targets = document.querySelectorAll(`div[class^="ChatMessageInputContainer_inputContainer"]`);
-                console.log(targets.length + " input target(s) found");
+                //console.log(targets.length + " input target(s) found");
 
                 if (targets.length === 1) {
 
