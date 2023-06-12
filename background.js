@@ -72,31 +72,36 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
                 // Connection opened
                 socket.addEventListener('open', function (event) {
                     console.log('Connection opened to LLM service');
+
+                    // Listen for messages from server
+                    socket.addEventListener('message', function (event) {
+                        console.log('Message from server');
+                        let payload = JSON.parse(event.data);
+                        console.log(payload)
+
+                        // track by request id ?
+
+                        // send to browser tab
+                        let origTab = senderMap[payload.clientId];
+                        chrome.tabs.sendMessage(origTab.id, payload);
+
+                    });
+
+                    // Listen for close event
+                    socket.addEventListener('close', function(event) {
+                        console.log('LLM service connection closed', event);
+                        socket = null;
+                    });
+
+
                     resolve(true);
                 });
 
 
-            });
 
-            // Listen for messages from server
-            socket.addEventListener('message', function (event) {
-                console.log('Message from server');
-                let payload = JSON.parse(event.data);
-                console.log(payload)
-
-                // track by request id ?
-
-                // send to browser tab
-                let origTab = senderMap[payload.clientId];
-                chrome.tabs.sendMessage(origTab.id, payload);
 
             });
 
-            // Listen for close event
-            socket.addEventListener('close', function(event) {
-                console.log('LLM service connection closed', event);
-                socket = null;
-            });
 
 
 

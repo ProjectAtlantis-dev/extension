@@ -111,6 +111,55 @@ window.addEventListener("load", async function(event) {
         return currService.model;
     }
 
+    let getOutputContent = function() {
+        if (!outputTarget) {
+            return "";
+        }
+
+        let tablesFound = false;
+        let lastDiv = outputTarget.querySelector('div[class^="ChatMessagesView_messagePair"]:last-child');
+        // see if tables
+        /*
+        if (lastDiv) {
+            let tables = lastDiv.querySelectorAll('table');
+            if (tables.length) {
+                tablesFound = true;
+                let buffer = tables[0].outerHTML;
+
+                console.log("Found table")
+                console.log(buffer);
+
+                try {
+                    let unused = await chrome.runtime.sendMessage({
+                        hostId: currService.hostId,
+                        clientId: currService.clientId,
+                        service: currService.service,
+                        model: currService.model,
+
+                        message: "table",
+
+                        requestId: currService.requestId,
+                        prompt: currService.prompt,
+
+                        data: sendBuffer
+                    });
+
+                    priorBufferSent = sendBuffer;
+                } catch (err) {
+                    console.log("ERROR: " + err.toString())
+                }
+
+
+                return buffer;
+            }
+        }
+        */
+
+        // get last child of output target
+        return outputTarget.innerText;
+    }
+
+
 
 
     let currService = {
@@ -172,6 +221,8 @@ window.addEventListener("load", async function(event) {
                 return;
             }
         }
+
+
 
 
         let getInputTarget = function() {
@@ -315,26 +366,11 @@ window.addEventListener("load", async function(event) {
             return;
         }
 
-        /*
-        var elements = document.querySelectorAll('button');
-
-        var targetButton = null;
-
-        for(var i = 0; i < elements.length; i++) {
-            if(elements[i].textContent.includes('Regenerate response')) {
-                targetButton = elements[i];
-                break;
-            }
-        }
-
-        console.log(targetButton);
-        */
-
-
 
 
         // if we get here we can send snapshot
-        let snap = outputTarget.innerText;
+        let snap = getOutputContent();
+        console.log("snap: " + snap)
         if (currService.service === "poe") {
 
             // we don't want the feedback buttons or suggested replies
@@ -384,54 +420,11 @@ window.addEventListener("load", async function(event) {
                 // do nothing
             } else {
 
-                // baseline hasn't changed in a while
-
-                // we need to send something but not sure what
-                //let doSend = true
 
                 let buffer = snap;
 
-                /*
-                let buffer
-                if (!priorBufferSent) {
-                    // send everything
-                    buffer = snap;
 
-                } else {
-
-
-                    if (snap.length > priorBufferSent.length) {
-
-                        // make sure content didn't change
-                        if (priorBufferSent.trim() === snap.substring(0, priorBufferSent.length).trim()) {
-                            console.log("SENDING delta")
-                            // send delta
-                            buffer = snap.substring(priorBufferSent.length)
-                        } else {
-                            console.log("SENDING everything due to some swapped content")
-                            console.log("PRIOR: " + priorBufferSent)
-                            console.log("CURR: " + snap.substring(priorBufferSent.length))
-                            buffer = snap
-                        }
-                    } else if (snap.length < priorBufferSent.length) {
-                        console.log("SENDING everything due to short length")
-                        // send everything
-                        buffer = snap
-                    } else {
-                        if (snap != priorBufferSent) {
-                            console.log("SENDING everything due to same length content change")
-                            // length did not change but content did; send everything
-                            buffer = snap
-                        } else {
-                            // do not send
-                            //console.log("DO NOT SEND")
-                            doSend = false;
-                        }
-                    }
-                }
-                */
-
-                if (buffer != priorBufferSent) {
+                if (buffer.length && (buffer != priorBufferSent)) {
 
                     // make sure we don't send anything prior to the prompt
                     let sendBuffer = buffer;
@@ -440,7 +433,7 @@ window.addEventListener("load", async function(event) {
                         sendBuffer = buffer.substring(promptIdx);
                     }
 
-                    //console.log("Sending snapshot: START >>>>" + sendBuffer + "<<<< END")
+                    console.log("Sending snapshot: START >>>>" + sendBuffer + "<<<< END")
                     try {
                         let unused = await chrome.runtime.sendMessage({
                             hostId: currService.hostId,
@@ -456,9 +449,15 @@ window.addEventListener("load", async function(event) {
                             data: sendBuffer
                         });
 
-                        priorBufferSent = buffer;
+                        priorBufferSent = sendBuffer;
                     } catch (err) {
                         console.log("ERROR: " + err.toString())
+                    }
+                } else {
+                    if (buffer.length) {
+                        console.log("buffer same as already sent")
+                        console.log("buffer: " + buffer)
+                        console.log("prior: " + priorBufferSent)
                     }
                 }
 
@@ -532,20 +531,36 @@ window.addEventListener("load", async function(event) {
         return elementsWithPrefix;
     }
 
+
+    // openai
     let findDone = function() {
         let tick = async function() {
 
             console.log("Attempting to find done")
-            let divs = document.querySelectorAll('div');
-            for (let i = 0; i < divs.length; i++) {
-                let tc = divs[i].textContent;
-                if (tc.indexOf("Regenerate response")>=0) {
-                    // found
+            if (currService.service === "openai") {
+
+                let divs = document.querySelectorAll('div');
+                for (let i = 0; i < divs.length; i++) {
+                    let tc = divs[i].textContent;
+                    if (tc.indexOf("Regenerate response")>=0) {
+                        // found
+                        console.log("FOUND DONE")
+                        doneFound = true;
+                        return;
+
+                    }
+                }
+            } else if (currService.service === "poe") {
+
+                let targets = document.querySelectorAll(`section[class^="ChatMessageFeedbackButtons_feedbackButtonsContainer"]`);
+                if (targets.length === 1) {
                     console.log("FOUND DONE")
                     doneFound = true;
                     return;
-
                 }
+
+            } else {
+                return;
             }
 
             // if not found do tick again
@@ -581,7 +596,7 @@ window.addEventListener("load", async function(event) {
 
                         // reset baseline
                         if (outputTarget) {
-                            baselineSnap = outputTarget.innerText;
+                            baselineSnap = getOutputContent();
                         } else {
                             baselineSnap = "";
                         }
@@ -597,6 +612,8 @@ window.addEventListener("load", async function(event) {
                         if (buttons.length) {
                             let firstButton = buttons[0];
                             firstButton.click();
+                            doneFound = false;
+                            findDone();
                         } else {
                             console.log("No button(s) found")
                             console.log(container)
@@ -623,7 +640,7 @@ window.addEventListener("load", async function(event) {
 
                 // reset baseline
                 if (outputTarget) {
-                    baselineSnap = outputTarget.innerText;
+                    baselineSnap = getOutputContent();
                 } else {
                     baselineSnap = "";
                 }
