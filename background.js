@@ -161,7 +161,7 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
             console.log("Sending START >>>>>" + message.data + "<<<<< END")
         } else if (message.message === "announce") {
             // this is like a general alive ping
-            console.log("Sending announce " + message.service + " " + message.model)
+            //console.log("Sending announce " + message.service + " " + message.model)
         } else if (message.message === "ping") {
             // this is like a per request ping
             console.log("Sending ping " + message.requestId)

@@ -123,8 +123,10 @@ window.addEventListener("load", async function(event) {
     }
 
 
+    let outputTarget
+
     let baselineSnap = "";
-    let baselineSnapDate = null;
+    let baselineSnapDate = new Date();
     let priorBufferSent = "";
 
     setInterval(async function() {
@@ -223,7 +225,7 @@ window.addEventListener("load", async function(event) {
                 if (firstButton) {
 
                     //console.log("Input target found");
-                    inputTarget = prompt;
+                    return prompt;
 
                 } else {
                     console.log("Button not found")
@@ -302,7 +304,7 @@ window.addEventListener("load", async function(event) {
             }
 
         }
-        let outputTarget = getOutputTarget();
+        outputTarget = getOutputTarget();
         if (!outputTarget) {
             // can briefly disappear while response is generating
             return;
@@ -366,11 +368,11 @@ window.addEventListener("load", async function(event) {
 
             // no change since baseline; we are potentially idle
 
-            let elapsed = snapDate - baselineSnapDate;
+            let elapsed = (snapDate - baselineSnapDate)/1000;
             console.log("IDLE: " + elapsed);
 
 
-            if (elapsed < 4000) {
+            if (elapsed < 4) {
                 // do nothing
             } else {
 
@@ -515,6 +517,14 @@ window.addEventListener("load", async function(event) {
 
                     if (prompt) {
 
+                        // reset baseline
+                        if (outputTarget) {
+                            baselineSnap = outputTarget.innerText;
+                        } else {
+                            baselineSnap = "";
+                        }
+                        baselineSnapDate = new Date();
+
                         setNativeValue(prompt, request.data);
                         prompt.dispatchEvent(new Event('input', { bubbles: true }))
 
@@ -548,6 +558,14 @@ window.addEventListener("load", async function(event) {
                     return;
                 }
 
+
+                // reset baseline
+                if (outputTarget) {
+                    baselineSnap = outputTarget.innerText;
+                } else {
+                    baselineSnap = "";
+                }
+                baselineSnapDate = new Date();
 
                 setNativeValue(prompt, request.data);
                 prompt.dispatchEvent(new Event('input', { bubbles: true }))
