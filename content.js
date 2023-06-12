@@ -127,7 +127,12 @@ window.addEventListener("load", async function(event) {
 
     let baselineSnap = "";
     let baselineSnapDate = new Date();
+
     let priorBufferSent = "";
+    let priorSnap = "";
+    let priorSentSnap = "";
+
+    let doneFound = false;
 
     setInterval(async function() {
         //console.log("Running page scan")
@@ -290,7 +295,7 @@ window.addEventListener("load", async function(event) {
 
                 if (targets.length === 2) {
 
-                    console.log("Output content found");
+                    //console.log("Output content found");
                     return targets[1];
 
                 } else {
@@ -345,6 +350,8 @@ window.addEventListener("load", async function(event) {
             baselineSnap = snap;
             baselineSnapDate = snapDate;
 
+
+
             if (currService.requestId) {
                 try {
                     let unused = await chrome.runtime.sendMessage({
@@ -369,17 +376,22 @@ window.addEventListener("load", async function(event) {
             // no change since baseline; we are potentially idle
 
             let elapsed = (snapDate - baselineSnapDate)/1000;
-            console.log("IDLE: " + elapsed);
 
 
-            if (elapsed < 4) {
+
+            if (!doneFound && elapsed < 4) {
+                console.log("IDLE: " + elapsed);
                 // do nothing
             } else {
 
                 // baseline hasn't changed in a while
 
                 // we need to send something but not sure what
-                let doSend = true
+                //let doSend = true
+
+                let buffer = snap;
+
+                /*
                 let buffer
                 if (!priorBufferSent) {
                     // send everything
@@ -391,32 +403,35 @@ window.addEventListener("load", async function(event) {
                     if (snap.length > priorBufferSent.length) {
 
                         // make sure content didn't change
-                        if (priorBufferSent === snap.substring(priorBufferSent.length)) {
-                            console.log("Sending delta")
+                        if (priorBufferSent.trim() === snap.substring(0, priorBufferSent.length).trim()) {
+                            console.log("SENDING delta")
                             // send delta
                             buffer = snap.substring(priorBufferSent.length)
                         } else {
-                            console.log("Sending everything due to some swapped content")
+                            console.log("SENDING everything due to some swapped content")
+                            console.log("PRIOR: " + priorBufferSent)
+                            console.log("CURR: " + snap.substring(priorBufferSent.length))
                             buffer = snap
                         }
                     } else if (snap.length < priorBufferSent.length) {
-                        console.log("Sending everything due to short length")
+                        console.log("SENDING everything due to short length")
                         // send everything
                         buffer = snap
                     } else {
                         if (snap != priorBufferSent) {
-                            console.log("Sending everything due to same length content change")
+                            console.log("SENDING everything due to same length content change")
                             // length did not change but content did; send everything
                             buffer = snap
                         } else {
                             // do not send
-                            console.log("DO NOT SEND")
+                            //console.log("DO NOT SEND")
                             doSend = false;
                         }
                     }
                 }
+                */
 
-                if (doSend && (buffer != priorBufferSent)) {
+                if (buffer != priorBufferSent) {
 
                     // make sure we don't send anything prior to the prompt
                     let sendBuffer = buffer;
@@ -425,7 +440,7 @@ window.addEventListener("load", async function(event) {
                         sendBuffer = buffer.substring(promptIdx);
                     }
 
-                    console.log("Sending snapshot: START >>>>" + sendBuffer + "<<<< END")
+                    //console.log("Sending snapshot: START >>>>" + sendBuffer + "<<<< END")
                     try {
                         let unused = await chrome.runtime.sendMessage({
                             hostId: currService.hostId,
@@ -447,12 +462,34 @@ window.addEventListener("load", async function(event) {
                     }
                 }
 
+                if (doneFound) {
+                    doneFound = false;
+
+                    try {
+                        let unused = await chrome.runtime.sendMessage({
+                            hostId: currService.hostId,
+                            clientId: currService.clientId,
+                            service: currService.service,
+                            model: currService.model,
+
+                            message: "done",
+
+                            requestId: currService.requestId,
+                            prompt: currService.prompt
+
+                        });
+
+                    } catch (err) {
+                        console.log("ERROR: " + err.toString())
+                    }
+                }
+
             }
 
         }
 
 
-    } ,2000);
+    } ,1000);
 
     function setNativeValue(element, value) {
         const { set: valueSetter } = Object.getOwnPropertyDescriptor(element, 'value') || {}
@@ -494,6 +531,31 @@ window.addEventListener("load", async function(event) {
 
         return elementsWithPrefix;
     }
+
+    let findDone = function() {
+        let tick = async function() {
+
+            console.log("Attempting to find done")
+            let divs = document.querySelectorAll('div');
+            for (let i = 0; i < divs.length; i++) {
+                let tc = divs[i].textContent;
+                if (tc.indexOf("Regenerate response")>=0) {
+                    // found
+                    console.log("FOUND DONE")
+                    doneFound = true;
+                    return;
+
+                }
+            }
+
+            // if not found do tick again
+            setTimeout(tick, 500);
+
+        }
+
+        setTimeout(tick, 500);
+    }
+
 
     chrome.runtime.onMessage.addListener(
         function(request, sender, sendResponse) {
@@ -574,7 +636,8 @@ window.addEventListener("load", async function(event) {
                 let firstButton = parentElement.querySelector('button');
                 if (firstButton) {
                     firstButton.click();
-
+                    doneFound = false;
+                    findDone();
                 } else {
                     console.log("Button not found")
                 }

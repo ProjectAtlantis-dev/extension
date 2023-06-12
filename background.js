@@ -165,6 +165,8 @@ chrome.runtime.onMessage.addListener(async function(message, sender, sendRespons
         } else if (message.message === "ping") {
             // this is like a per request ping
             console.log("Sending ping " + message.requestId)
+        } else if (message.message === "done") {
+            console.log("Sending done " + message.requestId)
         }
 
         // send 'message'
