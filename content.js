@@ -309,7 +309,8 @@ window.addEventListener("load", async function(event) {
                 clientId: currService.clientId,
                 service: currService.service,
                 model: currService.model,
-                message: "announce"
+                message: "announce",
+                version:0.1
             }
             //console.log(announceMsg)
             let unused = await chrome.runtime.sendMessage(announceMsg);
